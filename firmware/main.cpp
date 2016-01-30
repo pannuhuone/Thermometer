@@ -12,9 +12,15 @@
 * Teemu Kulma teemu.kulma@iki.fi
 */
 
+#include "main.h"
 #include "Nextion.h"
 
-#define PHOTON_PREFIX_1       "Nextion_" // Prefix for sensor
+// EEPROM
+// Address 0 = 117 if values have been saved
+// Address 1 = 0/1 for language (0: English, 1: Finnish)
+// Address 1 = 0/1 for temperature scale (0: Celsius, 1: Fahrenheit)
+int8_t langCode = 0;
+int8_t tempScale = 0;
 
 /* Declare a text objects [page id:0,component id:1, component name: "t0"]. */
 NexPage home = NexPage(0, 0, "home");
@@ -37,6 +43,10 @@ NexButton b1 = NexButton(0, 2, "b1");
 NexButton b2 = NexButton(0, 1, "b2");
 
 NexPage settings = NexPage(1, 0, "settings");
+NexText tx0 = NexText(1, 4, "tx0");
+NexText tx1 = NexText(1, 5, "tx1");
+NexDSButton bt0 = NexDSButton(1, 6, "bt0");
+NexDSButton bt1 = NexDSButton(1, 7, "bt1");
 NexButton n0 = NexButton(1, 1, "n0");
 NexButton n1 = NexButton(1, 3, "n1");
 
@@ -54,6 +64,7 @@ NexButton u0 = NexButton(4, 11, "u0");
 NexTouch *nex_listen_list[] =
 {
     &b0, &b1, &b2,
+    &bt0, &bt1,
     &n0, &n1,
     &bu0,
     &u0,
@@ -94,6 +105,63 @@ void b2PopCallback(void *ptr)
   Serial.println((uint32_t)ptr);
 
   settings.show();
+  // Set dualbutton states as saved.
+  bt0.setValue((uint32_t)langCode);
+  bt1.setValue((uint32_t)tempScale);
+}
+
+void bt0PopCallback(void *ptr)
+{
+  uint32_t dual_state;
+  Serial.println("bt0PopCallback");
+  Serial.print("ptr=");
+  Serial.println((uint32_t)ptr);
+
+  // EEPROM
+  // Address 1 = 0/1 for language (0: English, 1: Finnish)
+  bt0.getValue(&dual_state);
+  if(dual_state) {
+    Serial.println("Language: FI");
+    langCode = 1;
+  }
+  else {
+    Serial.println("Language: EN");
+    langCode = 0;
+  }
+
+  int8_t eepromLang = EEPROM.read(1);
+  if(langCode != eepromLang) {
+    Serial.print("Writing to EEPROM! Value: ");
+    Serial.println(langCode);
+    EEPROM.write(1, langCode);
+  }
+}
+
+void bt1PopCallback(void *ptr)
+{
+  uint32_t dual_state;
+  Serial.println("bt1PopCallback");
+  Serial.print("ptr=");
+  Serial.println((uint32_t)ptr);
+
+  // EEPROM
+  // Address 1 = 0/1 for temperature scale (0: Celsius, 1: Fahrenheit)
+  bt1.getValue(&dual_state);
+  if(dual_state) {
+    Serial.println("Scale: F");
+    tempScale = 1;
+  }
+  else {
+    Serial.println("Scale: °C");
+    tempScale = 0;
+  }
+
+  int8_t eepromScale = EEPROM.read(2);
+  if(tempScale != eepromScale) {
+    Serial.print("Writing to EEPROM! Value: ");
+    Serial.println(tempScale);
+    EEPROM.write(2, tempScale);
+  }
 }
 
 void n0PopCallback(void *ptr)
@@ -122,6 +190,9 @@ void bu0PopCallback(void *ptr)
   Serial.println((uint32_t)ptr);
 
   settings.show();
+  // Set dualbutton values as saved.
+  bt0.setValue((uint32_t)langCode);
+  bt1.setValue((uint32_t)tempScale);
 }
 
 void u0PopCallback(void *ptr)
@@ -132,28 +203,42 @@ void u0PopCallback(void *ptr)
 
   home.show();
   writeLocation();
+
+  /*int addr = 0;
+  char tempInChar[32];
+  EEPROM.get(addr, tempInChar);
+  Serial.print("EEPROM temp: ");
+  Serial.println((String)tempInChar);*/
 }
 
 /*  */
 void myHandler(const char *event, const char *data)
 {
-  Serial.print(event);
-  Serial.print(", data: ");
+  //Serial.println("myHandler");
+  //Serial.print(event);
+  //Serial.print(", data: ");
+
   if (data) {
-    Serial.println(data);
+    //Serial.println(data);
 
     if ((String)event == "Outside_Temperature")
     {
+      int addr = 0;
+      //EEPROM.put(addr, data);
       t0.setText(data);
     }
     if((String)event == "Outside_Humidity")
     {
+      int addr = 1;
+      //EEPROM.put(addr, data);
       t8.setText(data);
     }
   }
-  else
-    Serial.println("NULL");
+  /* else
+    Serial.println("NULL"); */
 }
+
+
 
 void setup() {
   Serial.begin(9600);
@@ -168,10 +253,39 @@ void setup() {
   b0.attachPop(b0PopCallback);
   b1.attachPop(b1PopCallback);
   b2.attachPop(b2PopCallback);
+  bt0.attachPop(bt0PopCallback, &bt0);
+  bt1.attachPop(bt1PopCallback, &bt1);
   n0.attachPop(n0PopCallback);
   n1.attachPop(n1PopCallback);
   bu0.attachPop(bu0PopCallback);
   u0.attachPop(u0PopCallback);
+
+  // See if this EEPROM has saved data
+  if(EEPROM.read(0)==117) {
+    // Set language
+    if(EEPROM.read(1)==1) {
+      langCode = 1;
+      bt0.setValue((uint32_t)langCode);
+    }
+    else {
+      langCode = 0;
+    }
+
+    // Set temperature scale
+    if(EEPROM.read(2)==1) {
+      tempScale = 1;
+      bt1.setValue((uint32_t)tempScale);
+    }
+    else
+      tempScale = 0;
+  } else {
+        // Initialize
+        EEPROM.write(0, 117);
+        // Language
+        EEPROM.write(1, 0);
+        // Temperature scale
+        EEPROM.write(2, 0);
+    }
 
   writeLocation();
 }
