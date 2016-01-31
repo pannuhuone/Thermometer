@@ -74,7 +74,7 @@ NexTouch *nex_listen_list[] =
 /* Write Location to the screen */
 void writeLocation()
 {
-  Serial.println("function: writeLocation");
+  dbSerialPrintln("function: writeLocation");
 
   t2.setText("Koivukehä");
 }
@@ -82,27 +82,27 @@ void writeLocation()
 /* Button components pop callback functions. */
 void b0PopCallback(void *ptr)
 {
-  Serial.println("b0PopCallback");
-  Serial.print("ptr=");
-  Serial.println((uint32_t)ptr);
+  dbSerialPrintln("b0PopCallback");
+  dbSerialPrint("ptr=");
+  dbSerialPrintln((uint32_t)ptr);
 
   second.show();
 }
 
 void b1PopCallback(void *ptr)
 {
-  Serial.println("b1PopCallback");
-  Serial.print("ptr=");
-  Serial.println((uint32_t)ptr);
+  dbSerialPrintln("b1PopCallback");
+  dbSerialPrint("ptr=");
+  dbSerialPrintln((uint32_t)ptr);
 
   // History page TBD!
 }
 
 void b2PopCallback(void *ptr)
 {
-  Serial.println("b2PopCallback");
-  Serial.print("ptr=");
-  Serial.println((uint32_t)ptr);
+  dbSerialPrintln("b2PopCallback");
+  dbSerialPrint("ptr=");
+  dbSerialPrintln((uint32_t)ptr);
 
   settings.show();
   // Set dualbutton states as saved.
@@ -113,26 +113,26 @@ void b2PopCallback(void *ptr)
 void bt0PopCallback(void *ptr)
 {
   uint32_t dual_state;
-  Serial.println("bt0PopCallback");
-  Serial.print("ptr=");
-  Serial.println((uint32_t)ptr);
+  dbSerialPrintln("bt0PopCallback");
+  dbSerialPrint("ptr=");
+  dbSerialPrintln((uint32_t)ptr);
 
   // EEPROM
   // Address 1 = 0/1 for language (0: English, 1: Finnish)
   bt0.getValue(&dual_state);
   if(dual_state) {
-    Serial.println("Language: FI");
+    dbSerialPrintln("Language: FI");
     langCode = 1;
   }
   else {
-    Serial.println("Language: EN");
+    dbSerialPrintln("Language: EN");
     langCode = 0;
   }
 
   int8_t eepromLang = EEPROM.read(1);
   if(langCode != eepromLang) {
-    Serial.print("Writing to EEPROM! Value: ");
-    Serial.println(langCode);
+    dbSerialPrint("Writing to EEPROM! Value: ");
+    dbSerialPrintln(langCode);
     EEPROM.write(1, langCode);
   }
 }
@@ -140,35 +140,35 @@ void bt0PopCallback(void *ptr)
 void bt1PopCallback(void *ptr)
 {
   uint32_t dual_state;
-  Serial.println("bt1PopCallback");
-  Serial.print("ptr=");
-  Serial.println((uint32_t)ptr);
+  dbSerialPrintln("bt1PopCallback");
+  dbSerialPrint("ptr=");
+  dbSerialPrintln((uint32_t)ptr);
 
   // EEPROM
   // Address 1 = 0/1 for temperature scale (0: Celsius, 1: Fahrenheit)
   bt1.getValue(&dual_state);
   if(dual_state) {
-    Serial.println("Scale: F");
+    dbSerialPrintln("Scale: F");
     tempScale = 1;
   }
   else {
-    Serial.println("Scale: °C");
+    dbSerialPrintln("Scale: °C");
     tempScale = 0;
   }
 
   int8_t eepromScale = EEPROM.read(2);
   if(tempScale != eepromScale) {
-    Serial.print("Writing to EEPROM! Value: ");
-    Serial.println(tempScale);
+    dbSerialPrint("Writing to EEPROM! Value: ");
+    dbSerialPrintln(tempScale);
     EEPROM.write(2, tempScale);
   }
 }
 
 void n0PopCallback(void *ptr)
 {
-  Serial.println("n0PopCallback");
-  Serial.print("ptr=");
-  Serial.println((uint32_t)ptr);
+  dbSerialPrintln("n0PopCallback");
+  dbSerialPrint("ptr=");
+  dbSerialPrintln((uint32_t)ptr);
 
   home.show();
   writeLocation();
@@ -176,18 +176,18 @@ void n0PopCallback(void *ptr)
 
 void n1PopCallback(void *ptr)
 {
-  Serial.println("n1PopCallback");
-  Serial.print("ptr=");
-  Serial.println((uint32_t)ptr);
+  dbSerialPrintln("n1PopCallback");
+  dbSerialPrint("ptr=");
+  dbSerialPrintln((uint32_t)ptr);
 
   about.show();
 }
 
 void bu0PopCallback(void *ptr)
 {
-  Serial.println("bu0PopCallback");
-  Serial.print("ptr=");
-  Serial.println((uint32_t)ptr);
+  dbSerialPrintln("bu0PopCallback");
+  dbSerialPrint("ptr=");
+  dbSerialPrintln((uint32_t)ptr);
 
   settings.show();
   // Set dualbutton values as saved.
@@ -197,45 +197,41 @@ void bu0PopCallback(void *ptr)
 
 void u0PopCallback(void *ptr)
 {
-  Serial.println("u0PopCallback");
-  Serial.print("ptr=");
-  Serial.println((uint32_t)ptr);
+  dbSerialPrintln("u0PopCallback");
+  dbSerialPrint("ptr=");
+  dbSerialPrintln((uint32_t)ptr);
 
   home.show();
   writeLocation();
-
-  /*int addr = 0;
-  char tempInChar[32];
-  EEPROM.get(addr, tempInChar);
-  Serial.print("EEPROM temp: ");
-  Serial.println((String)tempInChar);*/
 }
 
 /*  */
 void myHandler(const char *event, const char *data)
 {
-  //Serial.println("myHandler");
-  //Serial.print(event);
-  //Serial.print(", data: ");
+  dbSerialPrintln("myHandler");
 
   if (data) {
-    //Serial.println(data);
-
     if ((String)event == "Outside_Temperature")
     {
-      int addr = 0;
-      //EEPROM.put(addr, data);
-      t0.setText(data);
+      float fTemp = atof(data);
+      char buf[10];
+      sprintf(buf, "%.1f", fTemp);
+      dbSerialPrint("Temp: ");
+      dbSerialPrintln(buf);
+      t0.setText(buf);
     }
     if((String)event == "Outside_Humidity")
     {
-      int addr = 1;
-      //EEPROM.put(addr, data);
-      t8.setText(data);
+      float fHumid = atof(data);
+      char buf[10];
+      sprintf(buf, "%.1f", fHumid);
+      dbSerialPrint("Humid: ");
+      dbSerialPrintln(buf);
+      t8.setText(buf);
     }
   }
-  /* else
-    Serial.println("NULL"); */
+  else
+    dbSerialPrintln("NULL");
 }
 
 
@@ -270,7 +266,6 @@ void setup() {
     else {
       langCode = 0;
     }
-
     // Set temperature scale
     if(EEPROM.read(2)==1) {
       tempScale = 1;

@@ -20,12 +20,12 @@
 #define __NEXCONFIG_H__
 
 /**
- * @addtogroup Configuration 
- * @{ 
+ * @addtogroup Configuration
+ * @{
  */
 
  /**
- * Define the component fields to manipulate 
+ * Define the component fields to manipulate
  * Matrix which field can be set on what component
  */
 
@@ -55,30 +55,30 @@
 #define NexCENTERY      "ycen"   // Text, Number, Button,            ,        ,     ,      ,         ,       ,      ,         ,
 #define NexTEXT         "txt"    // Text,       , Button,            ,        ,     ,      ,         ,       ,      , Variable,
 #define NexVALUE        "val"    //     , Number,       , Progressbar,        ,     , Gauge,         , Slider,      , Variable, DualStateButton
-#define NexMINVALUE     "minval" //     ,       ,       ,            ,        ,     ,      ,         , Slider,      ,         , 
-#define NexMAXVALUE     "maxval" //     ,       ,       ,            ,        ,     ,      ,         , Slider,      ,         , 
-#define NexLENGTH       "lenth"  //     , Number,       ,            ,        ,     ,      ,         ,       ,      ,         , 
-#define NexWIDTH        "wid"    //     ,       ,       ,            ,        ,     , Gauge,         ,       ,      ,         , 
-#define NexGRIDCOLOR    "gdc"    //     ,       ,       ,            ,        ,     ,      , Waveform,       ,      ,         , 
-#define NexGRIDWIDTH    "gdw"    //     ,       ,       ,            ,        ,     ,      , Waveform,       ,      ,         , 
-#define NexTHUMBWIDTH   "wid"    //     ,       ,       ,            ,        ,     ,      ,         , Slider,      ,         , 
-#define NexTHUMBHEIGHT  "hig"    //     ,       ,       ,            ,        ,     ,      ,         , Slider,      ,         , 
-#define NexINTERVAL     "tim"    //     ,       ,       ,            ,        ,     ,      ,         ,       , Timer,         , 
-#define NexENABLED      "en"     //     ,       ,       ,            ,        ,     ,      ,         ,       , Timer,         , 
+#define NexMINVALUE     "minval" //     ,       ,       ,            ,        ,     ,      ,         , Slider,      ,         ,
+#define NexMAXVALUE     "maxval" //     ,       ,       ,            ,        ,     ,      ,         , Slider,      ,         ,
+#define NexLENGTH       "lenth"  //     , Number,       ,            ,        ,     ,      ,         ,       ,      ,         ,
+#define NexWIDTH        "wid"    //     ,       ,       ,            ,        ,     , Gauge,         ,       ,      ,         ,
+#define NexGRIDCOLOR    "gdc"    //     ,       ,       ,            ,        ,     ,      , Waveform,       ,      ,         ,
+#define NexGRIDWIDTH    "gdw"    //     ,       ,       ,            ,        ,     ,      , Waveform,       ,      ,         ,
+#define NexTHUMBWIDTH   "wid"    //     ,       ,       ,            ,        ,     ,      ,         , Slider,      ,         ,
+#define NexTHUMBHEIGHT  "hig"    //     ,       ,       ,            ,        ,     ,      ,         , Slider,      ,         ,
+#define NexINTERVAL     "tim"    //     ,       ,       ,            ,        ,     ,      ,         ,       , Timer,         ,
+#define NexENABLED      "en"     //     ,       ,       ,            ,        ,     ,      ,         ,       , Timer,         ,
 
-/** 
- * Define DEBUG_SERIAL_ENABLE to enable debug serial. 
- * Comment it to disable debug serial. 
+/**
+ * Define DEBUG_SERIAL_ENABLE to enable debug serial.
+ * Comment it to disable debug serial.
  */
 #define DEBUG_SERIAL_ENABLE
 
 /**
- * Define dbSerial for the output of debug messages. 
+ * Define dbSerial for the output of debug messages.
  */
 #define dbSerial Serial
 
 /**
- * Define nexSerial for communicate with Nextion touch panel. 
+ * Define nexSerial for communicate with Nextion touch panel.
  */
 #define nexSerial Serial1
 
