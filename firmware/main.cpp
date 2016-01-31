@@ -22,6 +22,11 @@
 int8_t langCode = 0;
 int8_t tempScale = 0;
 
+// Current values
+int currentPage = HOME_SCREEN;
+float currentOutsideTemperature = 0.0;
+float currentOutsideHumidity = 0.0;
+
 /* Declare a text objects [page id:0,component id:1, component name: "t0"]. */
 NexPage home = NexPage(0, 0, "home");
 NexText t0 = NexText(0, 4, "t0");
@@ -71,26 +76,91 @@ NexTouch *nex_listen_list[] =
     NULL
 };
 
-/* Write Location to the screen */
+/* Write Location to the home screen */
 void writeLocation()
 {
-  dbSerialPrintln("function: writeLocation");
-
+  dbSerialPrintln("writeLocation");
+  dbSerialPrintln("Koivukehä");
   t2.setText("Koivukehä");
 }
 
-/* Button components pop callback functions. */
-void b0PopCallback(void *ptr)
-{
+/* ********** SCREEN RENDER FUNCTIONS ********** */
+/* ********************************************* */
+
+/* Rendering home screen */
+void renderHomeScreen() {
+  writeLocation();
+
+  // Render outside temperature
+  char bufTemp[10];
+  sprintf(bufTemp, "%.1f", currentOutsideTemperature);
+  t0.setText(bufTemp);
+
+  // Render outside humidity
+  char bufHumid[10];;
+  sprintf(bufHumid, "%.1f", currentOutsideHumidity);
+  t8.setText(bufHumid);
+}
+
+/* Rendering settings screen */
+void renderSettingsScreen() {
+  // Set dualbutton states as saved.
+  bt0.setValue((uint32_t)langCode);
+  bt1.setValue((uint32_t)tempScale);
+}
+
+/* Refreshing part of the screen items
+void refreshScreen(int screenNum, ScreenRefreshData data) {
+
+}*/
+
+/* Forwarding to correct screen render function. */
+void renderScreen(int screenNum) {
+  dbSerialPrintln("renderScreen");
+
+  switch(screenNum) {
+    case HOME_SCREEN:
+    dbSerialPrintln("HOME_SCREEN");
+    currentPage = HOME_SCREEN;
+    home.show();
+    renderHomeScreen();
+    break;
+    case SETTINGS_SCREEN:
+    dbSerialPrintln("SETTINGS_SCREEN");
+    currentPage = SETTINGS_SCREEN;
+    settings.show();
+    renderSettingsScreen();
+    break;
+    case ABOUT_SCREEN:
+    dbSerialPrintln("ABOUT_SCREEN");
+    currentPage = ABOUT_SCREEN;
+    about.show();
+    break;
+    case SECOND_SCREEN:
+    dbSerialPrintln("SECOND_SCREEN");
+    currentPage = SECOND_SCREEN;
+    second.show();
+    break;
+    default:
+    dbSerialPrintln("DEFAULT");
+    currentPage = HOME_SCREEN;
+    home.show();
+    renderHomeScreen();
+    break;
+  }
+}
+
+/* ****** BUTTON SELECTION FUNCTIONS ******* */
+/* ***************************************** */
+void b0PopCallback(void *ptr) {
   dbSerialPrintln("b0PopCallback");
   dbSerialPrint("ptr=");
   dbSerialPrintln((uint32_t)ptr);
 
-  second.show();
+  renderScreen(SECOND_SCREEN);
 }
 
-void b1PopCallback(void *ptr)
-{
+void b1PopCallback(void *ptr) {
   dbSerialPrintln("b1PopCallback");
   dbSerialPrint("ptr=");
   dbSerialPrintln((uint32_t)ptr);
@@ -98,16 +168,13 @@ void b1PopCallback(void *ptr)
   // History page TBD!
 }
 
-void b2PopCallback(void *ptr)
-{
+void b2PopCallback(void *ptr) {
   dbSerialPrintln("b2PopCallback");
   dbSerialPrint("ptr=");
   dbSerialPrintln((uint32_t)ptr);
 
-  settings.show();
-  // Set dualbutton states as saved.
-  bt0.setValue((uint32_t)langCode);
-  bt1.setValue((uint32_t)tempScale);
+  //settings.show();
+  renderScreen(SETTINGS_SCREEN);
 }
 
 void bt0PopCallback(void *ptr)
@@ -170,8 +237,8 @@ void n0PopCallback(void *ptr)
   dbSerialPrint("ptr=");
   dbSerialPrintln((uint32_t)ptr);
 
-  home.show();
-  writeLocation();
+  //home.show();
+  renderScreen(HOME_SCREEN);
 }
 
 void n1PopCallback(void *ptr)
@@ -180,7 +247,8 @@ void n1PopCallback(void *ptr)
   dbSerialPrint("ptr=");
   dbSerialPrintln((uint32_t)ptr);
 
-  about.show();
+  //about.show();
+  renderScreen(ABOUT_SCREEN);
 }
 
 void bu0PopCallback(void *ptr)
@@ -189,10 +257,8 @@ void bu0PopCallback(void *ptr)
   dbSerialPrint("ptr=");
   dbSerialPrintln((uint32_t)ptr);
 
-  settings.show();
-  // Set dualbutton values as saved.
-  bt0.setValue((uint32_t)langCode);
-  bt1.setValue((uint32_t)tempScale);
+  //settings.show();
+  renderScreen(SETTINGS_SCREEN);
 }
 
 void u0PopCallback(void *ptr)
@@ -201,11 +267,11 @@ void u0PopCallback(void *ptr)
   dbSerialPrint("ptr=");
   dbSerialPrintln((uint32_t)ptr);
 
-  home.show();
-  writeLocation();
+  //home.show();
+  renderScreen(HOME_SCREEN);
 }
 
-/*  */
+/* TBD */
 void myHandler(const char *event, const char *data)
 {
   dbSerialPrintln("myHandler");
@@ -214,20 +280,22 @@ void myHandler(const char *event, const char *data)
     if ((String)event == "Outside_Temperature")
     {
       float fTemp = atof(data);
-      char buf[10];
-      sprintf(buf, "%.1f", fTemp);
-      dbSerialPrint("Temp: ");
-      dbSerialPrintln(buf);
-      t0.setText(buf);
+      if(currentPage == 0 || currentPage == 1) {
+        if(fTemp != currentOutsideTemperature) {
+          currentOutsideTemperature = fTemp;
+          renderScreen(currentPage);
+        }
+      }
     }
     if((String)event == "Outside_Humidity")
     {
       float fHumid = atof(data);
-      char buf[10];
-      sprintf(buf, "%.1f", fHumid);
-      dbSerialPrint("Humid: ");
-      dbSerialPrintln(buf);
-      t8.setText(buf);
+      if(currentPage == 0 || currentPage == 1) {
+        if(fHumid != currentOutsideHumidity) {
+          currentOutsideHumidity = fHumid;
+          renderScreen(currentPage);
+        }
+      }
     }
   }
   else
@@ -282,7 +350,7 @@ void setup() {
         EEPROM.write(2, 0);
     }
 
-  writeLocation();
+  renderScreen(HOME_SCREEN);
 }
 
 void loop() {
