@@ -3,8 +3,9 @@
 
 #define PHOTON_PREFIX_1       "Nextion_" // Prefix for sensor
 
-const char * daysOfWeek_en[7] = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"};
-const char * daysOfWeek_fi[7] = {"Maanantai", "Tiistai", "Keskiviikko", "Torstai", "Perjantai", "Lauantai", "Sunnuntai"};
+const int TIMEZONE_OFFSET = 2;
+const char * daysOfWeek[7] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+const char * daysOfWeek_fi[7] = {"Sunnuntai", "Maanantai", "Tiistai", "Keskiviikko", "Torstai", "Perjantai", "Lauantai"};
 
 /* Screens */
 const int HOME_SCREEN = 0;

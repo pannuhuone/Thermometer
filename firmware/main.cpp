@@ -27,7 +27,11 @@ int currentPage = HOME_SCREEN;
 float currentOutsideTemperature = 0.0;
 float currentOutsideHumidity = 0.0;
 
+// Time / date variables
+int currentWeekday = 0;
+
 /* Declare a text objects [page id:0,component id:1, component name: "t0"]. */
+/* Home screen */
 NexPage home = NexPage(0, 0, "home");
 NexText t0 = NexText(0, 4, "t0");
 NexText t2 = NexText(0, 6, "t2");
@@ -47,6 +51,7 @@ NexButton b0 = NexButton(0, 3, "b0");
 NexButton b1 = NexButton(0, 2, "b1");
 NexButton b2 = NexButton(0, 1, "b2");
 
+/* Settings screen */
 NexPage settings = NexPage(1, 0, "settings");
 NexText tx0 = NexText(1, 4, "tx0");
 NexText tx1 = NexText(1, 5, "tx1");
@@ -55,9 +60,11 @@ NexDSButton bt1 = NexDSButton(1, 7, "bt1");
 NexButton n0 = NexButton(1, 1, "n0");
 NexButton n1 = NexButton(1, 3, "n1");
 
+/* About page */
 NexPage about = NexPage(2, 0, "about");
 NexButton bu0 = NexButton(2, 2, "bu0");
 
+/* Second page */
 NexPage second = NexPage(4, 0, "second");
 NexText d0 = NexText(4, 3, "d0");
 NexText d2 = NexText(4, 5, "d2");
@@ -80,8 +87,8 @@ NexTouch *nex_listen_list[] =
 void writeLocation()
 {
   dbSerialPrintln("writeLocation");
-  dbSerialPrintln("Koivukeh√§");
-  t2.setText("Koivukeh√§");
+  dbSerialPrintln("Koivukeh‰");
+  t2.setText("Koivukeh‰");
 }
 
 /* ********** SCREEN RENDER FUNCTIONS ********** */
@@ -100,6 +107,17 @@ void renderHomeScreen() {
   char bufHumid[10];;
   sprintf(bufHumid, "%.1f", currentOutsideHumidity);
   t8.setText(bufHumid);
+
+  // Write days of week for forecast
+  dbSerialPrint("Time: ");
+  dbSerialPrint(Time.hour());
+  dbSerialPrint(":");
+  dbSerialPrintln(Time.minute());
+  dbSerialPrint("Day of week: ");
+  dbSerialPrintln(Time.weekday());
+  t5.setText(daysOfWeek[currentWeekday]);
+  t6.setText(daysOfWeek[currentWeekday + 1]);
+  t7.setText(daysOfWeek[currentWeekday + 2]);
 }
 
 /* Rendering settings screen */
@@ -109,10 +127,25 @@ void renderSettingsScreen() {
   bt1.setValue((uint32_t)tempScale);
 }
 
-/* Refreshing part of the screen items
-void refreshScreen(int screenNum, ScreenRefreshData data) {
-
-}*/
+/* Refreshing part of the screen items */
+void refreshScreen(int screen) {
+  dbSerialPrintln("refreshScreen");
+  switch(screen) {
+    case HOME_SCREEN:
+    /* Refresh outside temporary */
+    char bufTemp[10];
+    sprintf(bufTemp, "%.1f", currentOutsideTemperature);
+    t0.setText(bufTemp);
+    /* Refresh outside humidity */
+    char bufHumid[10];;
+    sprintf(bufHumid, "%.1f", currentOutsideHumidity);
+    t8.setText(bufHumid);
+    break;
+    case SECOND_SCREEN:
+    /* TBD */
+    break;
+  }
+}
 
 /* Forwarding to correct screen render function. */
 void renderScreen(int screenNum) {
@@ -173,7 +206,6 @@ void b2PopCallback(void *ptr) {
   dbSerialPrint("ptr=");
   dbSerialPrintln((uint32_t)ptr);
 
-  //settings.show();
   renderScreen(SETTINGS_SCREEN);
 }
 
@@ -237,7 +269,6 @@ void n0PopCallback(void *ptr)
   dbSerialPrint("ptr=");
   dbSerialPrintln((uint32_t)ptr);
 
-  //home.show();
   renderScreen(HOME_SCREEN);
 }
 
@@ -247,7 +278,6 @@ void n1PopCallback(void *ptr)
   dbSerialPrint("ptr=");
   dbSerialPrintln((uint32_t)ptr);
 
-  //about.show();
   renderScreen(ABOUT_SCREEN);
 }
 
@@ -257,7 +287,6 @@ void bu0PopCallback(void *ptr)
   dbSerialPrint("ptr=");
   dbSerialPrintln((uint32_t)ptr);
 
-  //settings.show();
   renderScreen(SETTINGS_SCREEN);
 }
 
@@ -267,33 +296,47 @@ void u0PopCallback(void *ptr)
   dbSerialPrint("ptr=");
   dbSerialPrintln((uint32_t)ptr);
 
-  //home.show();
   renderScreen(HOME_SCREEN);
 }
 
 /* TBD */
-void myHandler(const char *event, const char *data)
+void dataHandler(const char *event, const char *data)
 {
-  dbSerialPrintln("myHandler");
+  dbSerialPrintln("dataHandler");
 
   if (data) {
     if ((String)event == "Outside_Temperature")
     {
       float fTemp = atof(data);
-      if(currentPage == 0 || currentPage == 1) {
-        if(fTemp != currentOutsideTemperature) {
-          currentOutsideTemperature = fTemp;
-          renderScreen(currentPage);
+
+      if(fTemp != currentOutsideTemperature) {
+        currentOutsideTemperature = fTemp;
+
+        switch(currentPage) {
+          case HOME_SCREEN:
+          refreshScreen(HOME_SCREEN);
+          break;
+          case SECOND_SCREEN:
+          refreshScreen(SECOND_SCREEN);
+          break;
         }
       }
     }
+
     if((String)event == "Outside_Humidity")
     {
       float fHumid = atof(data);
-      if(currentPage == 0 || currentPage == 1) {
-        if(fHumid != currentOutsideHumidity) {
-          currentOutsideHumidity = fHumid;
-          renderScreen(currentPage);
+
+      if(fHumid != currentOutsideHumidity) {
+        currentOutsideHumidity = fHumid;
+
+        switch(currentPage) {
+          case HOME_SCREEN:
+          refreshScreen(HOME_SCREEN);
+          break;
+          case SECOND_SCREEN:
+          refreshScreen(SECOND_SCREEN);
+          break;
         }
       }
     }
@@ -302,13 +345,15 @@ void myHandler(const char *event, const char *data)
     dbSerialPrintln("NULL");
 }
 
-
+/* ******************************** */
+/* ************* SETUP ************ */
+/* ******************************** */
 
 void setup() {
   Serial.begin(9600);
 
-  Particle.subscribe("Outside_Temperature", myHandler, MY_DEVICES);
-  Particle.subscribe("Outside_Humidity", myHandler, MY_DEVICES);
+  Particle.subscribe("Outside_Temperature", dataHandler, MY_DEVICES);
+  Particle.subscribe("Outside_Humidity", dataHandler, MY_DEVICES);
 
   /* Set the baudrate which is for debug and communicate with Nextion screen. */
   nexInit();
@@ -350,9 +395,24 @@ void setup() {
         EEPROM.write(2, 0);
     }
 
+  // Set timezone
+  Time.zone(TIMEZONE_OFFSET);
+  // Set current day of the week
+  currentWeekday = Time.weekday();
+
   renderScreen(HOME_SCREEN);
 }
 
+/* ******************************* */
+/* ************* LOOP ************ */
+/* ******************************* */
+
 void loop() {
   nexLoop(nex_listen_list);
+
+  // Change forecast days of week after midnight
+  if(currentWeekday < Time.weekday()) {
+    currentWeekday = Time.weekday();
+    renderScreen(HOME_SCREEN);
+  }
 }
