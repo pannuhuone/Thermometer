@@ -24,7 +24,8 @@ int8_t tempScale = 0;
 
 // Current values
 int currentPage = HOME_SCREEN;
-float currentOutsideTemperature = 0.0;
+float currentOutsideTemperatureC = 0.0;
+float currentOutsideTemperatureF = 0.0;
 float currentOutsideHumidity = 0.0;
 
 // Time / date variables
@@ -100,7 +101,7 @@ void renderHomeScreen() {
 
   // Render outside temperature
   char bufTemp[10];
-  sprintf(bufTemp, "%.1f", currentOutsideTemperature);
+  sprintf(bufTemp, "%.1f", currentOutsideTemperatureC);
   t0.setText(bufTemp);
 
   // Render outside humidity
@@ -115,9 +116,18 @@ void renderHomeScreen() {
   dbSerialPrintln(Time.minute());
   dbSerialPrint("Day of week: ");
   dbSerialPrintln(Time.weekday());
-  t5.setText(daysOfWeek[currentWeekday]);
-  t6.setText(daysOfWeek[currentWeekday + 1]);
-  t7.setText(daysOfWeek[currentWeekday + 2]);
+  // If language selection is english
+  if(langCode==0) {
+    t5.setText(daysOfWeek_en[currentWeekday]);
+    t6.setText(daysOfWeek_en[currentWeekday + 1]);
+    t7.setText(daysOfWeek_en[currentWeekday + 2]);
+  }
+  // If language selection is finnish
+  if(langCode==1) {
+    t5.setText(daysOfWeek_fi[currentWeekday]);
+    t6.setText(daysOfWeek_fi[currentWeekday + 1]);
+    t7.setText(daysOfWeek_fi[currentWeekday + 2]);
+  }
 }
 
 /* Rendering settings screen */
@@ -134,7 +144,7 @@ void refreshScreen(int screen) {
     case HOME_SCREEN:
     /* Refresh outside temporary */
     char bufTemp[10];
-    sprintf(bufTemp, "%.1f", currentOutsideTemperature);
+    sprintf(bufTemp, "%.1f", currentOutsideTemperatureC);
     t0.setText(bufTemp);
     /* Refresh outside humidity */
     char bufHumid[10];;
@@ -309,17 +319,9 @@ void dataHandler(const char *event, const char *data)
     {
       float fTemp = atof(data);
 
-      if(fTemp != currentOutsideTemperature) {
-        currentOutsideTemperature = fTemp;
-
-        switch(currentPage) {
-          case HOME_SCREEN:
-          refreshScreen(HOME_SCREEN);
-          break;
-          case SECOND_SCREEN:
-          refreshScreen(SECOND_SCREEN);
-          break;
-        }
+      if(fTemp != currentOutsideTemperatureC) {
+        currentOutsideTemperatureC = fTemp;
+        refreshScreen(currentPage);
       }
     }
 
@@ -329,15 +331,7 @@ void dataHandler(const char *event, const char *data)
 
       if(fHumid != currentOutsideHumidity) {
         currentOutsideHumidity = fHumid;
-
-        switch(currentPage) {
-          case HOME_SCREEN:
-          refreshScreen(HOME_SCREEN);
-          break;
-          case SECOND_SCREEN:
-          refreshScreen(SECOND_SCREEN);
-          break;
-        }
+        refreshScreen(currentPage);
       }
     }
   }
@@ -402,6 +396,7 @@ void setup() {
 
   renderScreen(HOME_SCREEN);
 }
+
 
 /* ******************************* */
 /* ************* LOOP ************ */
