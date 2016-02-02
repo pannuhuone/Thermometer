@@ -25,7 +25,6 @@ int8_t tempScale = 0;
 // Current values
 int currentPage = HOME_SCREEN;
 float currentOutsideTemperatureC = 0.0;
-float currentOutsideTemperatureF = 0.0;
 float currentOutsideHumidity = 0.0;
 
 // Time / date variables
@@ -35,19 +34,27 @@ int currentWeekday = 0;
 /* Home screen */
 NexPage home = NexPage(0, 0, "home");
 NexText t0 = NexText(0, 4, "t0");
+NexText t1 = NexText(0, 5, "t1");
 NexText t2 = NexText(0, 6, "t2");
 NexText t3 = NexText(0, 7, "t3");
+NexText t4 = NexText(0, 8, "t4");
 NexText t5 = NexText(0, 9, "t5");
 NexText t6 = NexText(0, 10, "t6");
 NexText t7 = NexText(0, 11, "t7");
 NexText t8 = NexText(0, 12, "t8");
 NexText t10 = NexText(0, 14, "t10");
 NexText t12 = NexText(0, 16, "t12");
+NexText t13 = NexText(0, 17, "t13");
 NexText t14 = NexText(0, 18, "t14");
+NexText t15 = NexText(0, 19, "t15");
 NexText t16 = NexText(0, 20, "t16");
+NexText t17 = NexText(0, 21, "t17");
 NexText t18 = NexText(0, 22, "t18");
+NexText t19 = NexText(0, 23, "t19");
 NexText t20 = NexText(0, 24, "t20");
+NexText t21 = NexText(0, 25, "t21");
 NexText t22 = NexText(0, 26, "t22");
+NexText t23 = NexText(0, 27, "t23");
 NexButton b0 = NexButton(0, 3, "b0");
 NexButton b1 = NexButton(0, 2, "b1");
 NexButton b2 = NexButton(0, 1, "b2");
@@ -88,8 +95,8 @@ NexTouch *nex_listen_list[] =
 void writeLocation()
 {
   dbSerialPrintln("writeLocation");
-  dbSerialPrintln("Koivukeh�");
-  t2.setText("Koivukeh�");
+  dbSerialPrintln("Koivukehä");
+  t2.setText("Koivukehä");
 }
 
 /* ********** SCREEN RENDER FUNCTIONS ********** */
@@ -97,11 +104,18 @@ void writeLocation()
 
 /* Rendering home screen */
 void renderHomeScreen() {
+  dbSerialPrintln("renderHomeScreen");
   writeLocation();
 
   // Render outside temperature
   char bufTemp[10];
-  sprintf(bufTemp, "%.1f", currentOutsideTemperatureC);
+  if(tempScale == 0)
+    sprintf(bufTemp, "%.1f", currentOutsideTemperatureC);
+  else {
+    sprintf(bufTemp, "%.1f", currentOutsideTemperatureC * 1.8 + 32); // Celsius to Fahrenheit conversion
+    dbSerialPrint("Temp in F: ");
+    dbSerialPrintln(bufTemp);
+  }
   t0.setText(bufTemp);
 
   // Render outside humidity
@@ -109,7 +123,29 @@ void renderHomeScreen() {
   sprintf(bufHumid, "%.1f", currentOutsideHumidity);
   t8.setText(bufHumid);
 
-  // Write days of week for forecast
+  // Render correct temperature scale based on the selection
+  if(tempScale == 0) {
+    t1.setText("°C");
+    t4.setText("°C");
+    t13.setText("°C");
+    t15.setText("°C");
+    t17.setText("°C");
+    t19.setText("°C");
+    t21.setText("°C");
+    t23.setText("°C");
+  }
+  else {
+    t1.setText("F");
+    t4.setText("F");
+    t13.setText("F");
+    t15.setText("F");
+    t17.setText("F");
+    t19.setText("F");
+    t21.setText("F");
+    t23.setText("F");
+  }
+
+  // Render days of week for forecast
   dbSerialPrint("Time: ");
   dbSerialPrint(Time.hour());
   dbSerialPrint(":");
@@ -144,7 +180,10 @@ void refreshScreen(int screen) {
     case HOME_SCREEN:
     /* Refresh outside temporary */
     char bufTemp[10];
-    sprintf(bufTemp, "%.1f", currentOutsideTemperatureC);
+    if(tempScale == 0)
+      sprintf(bufTemp, "%.1f", currentOutsideTemperatureC);
+    else
+      sprintf(bufTemp, "%.1f", currentOutsideTemperatureC * 1.8 + 32); // Celsius to Fahrenheit conversion
     t0.setText(bufTemp);
     /* Refresh outside humidity */
     char bufHumid[10];;
