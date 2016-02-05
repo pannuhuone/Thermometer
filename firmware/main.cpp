@@ -14,6 +14,7 @@
 
 #include "main.h"
 #include "Nextion.h"
+#include "clickButton.h"
 
 // EEPROM
 // Address 0 = 117 if values have been saved
@@ -29,6 +30,20 @@ float currentOutsideHumidity = 0.0;
 
 // Time / date variables
 int currentWeekday = 0;
+
+// Weather variables
+int updateweatherhour = -1;
+int weather_state = WEATHER_READY;
+int badWeatherCall;
+
+// Weather data container
+WeatherData weatherData[4];
+
+/* BUTTON - WILL BE REMOVED LATER ON */
+const int buttonPin1 = 4;
+ClickButton button1(buttonPin1, LOW, CLICKBTN_PULLUP);
+// Button results
+int function = 0;
 
 /* Declare a text objects [page id:0,component id:1, component name: "t0"]. */
 /* Home screen */
@@ -55,6 +70,10 @@ NexText t20 = NexText(0, 24, "t20");
 NexText t21 = NexText(0, 25, "t21");
 NexText t22 = NexText(0, 26, "t22");
 NexText t23 = NexText(0, 27, "t23");
+NexPicture p0 = NexPicture(0, 28, "p0");
+NexPicture p1 = NexPicture(0, 29, "p1");
+NexPicture p2 = NexPicture(0, 30, "p2");
+NexPicture p3 = NexPicture(0, 31, "p3");
 NexButton b0 = NexButton(0, 3, "b0");
 NexButton b1 = NexButton(0, 2, "b1");
 NexButton b2 = NexButton(0, 1, "b2");
@@ -145,24 +164,86 @@ void renderHomeScreen() {
     t23.setText("F");
   }
 
-  // Render days of week for forecast
+  /* Render days of week for forecast
   dbSerialPrint("Time: ");
   dbSerialPrint(Time.hour());
   dbSerialPrint(":");
   dbSerialPrintln(Time.minute());
   dbSerialPrint("Day of week: ");
-  dbSerialPrintln(Time.weekday());
-  // If language selection is english
-  if(langCode==0) {
-    t5.setText(daysOfWeek_en[currentWeekday]);
-    t6.setText(daysOfWeek_en[currentWeekday + 1]);
-    t7.setText(daysOfWeek_en[currentWeekday + 2]);
-  }
-  // If language selection is finnish
-  if(langCode==1) {
-    t5.setText(daysOfWeek_fi[currentWeekday]);
-    t6.setText(daysOfWeek_fi[currentWeekday + 1]);
-    t7.setText(daysOfWeek_fi[currentWeekday + 2]);
+  dbSerialPrintln(Time.weekday());*/
+
+  int day = 0;
+  while(day < 4) {
+    // Icons for all days
+    dbSerialPrintln("weatherData[" + String(day) + "]: " + String(weatherData[day].icon));
+    if(weatherData[day].icon > 0) {
+      if(day == 0)
+        p0.setPic(weatherData[day].icon);
+      else if(day == 1)
+        p1.setPic(weatherData[day].icon);
+      else if(day == 2)
+        p2.setPic(weatherData[day].icon);
+      else if(day == 3)
+        p3.setPic(weatherData[day].icon);
+    }
+
+    // Day + 1 forecast info
+    if(day == 1) {
+      if(langCode==0)
+        t5.setText(daysOfWeek_en[weatherData[day].weekday]);
+      else
+        t5.setText(daysOfWeek_fi[weatherData[day].weekday]);
+
+      if(tempScale == 0)
+        t12.setText(String(weatherData[day].minTemp));
+      else
+        t12.setText(String((int)round(weatherData[day].minTemp * 1.8 + 32)));
+
+      if(tempScale == 0)
+        t14.setText(String(weatherData[day].maxTemp));
+      else
+        t14.setText(String((int)round(weatherData[day].maxTemp * 1.8 + 32)));
+    }
+    // Day + 2 forecast info
+    else if(day == 2) {
+      if(langCode==0)
+        t6.setText(daysOfWeek_en[weatherData[day].weekday]);
+      else
+        t6.setText(daysOfWeek_fi[weatherData[day].weekday]);
+      //t16.setText(String(weatherData[day].minTemp));
+      //t18.setText(String(weatherData[day].maxTemp));
+
+      if(tempScale == 0)
+        t16.setText(String(weatherData[day].minTemp));
+      else
+        t16.setText(String((int)round(weatherData[day].minTemp * 1.8 + 32)));
+
+      if(tempScale == 0)
+        t18.setText(String(weatherData[day].maxTemp));
+      else
+        t18.setText(String((int)round(weatherData[day].maxTemp * 1.8 + 32)));
+    }
+    // Day +3 foreast info
+    else if(day == 3) {
+      if(langCode==0)
+        t7.setText(daysOfWeek_en[int(weatherData[day].weekday)]);
+      else
+        t7.setText(daysOfWeek_fi[weatherData[day].weekday]);
+      //t20.setText(String(weatherData[day].minTemp));
+      //t22.setText(String(weatherData[day].maxTemp));
+
+      if(tempScale == 0)
+        t20.setText(String(weatherData[day].minTemp));
+      else
+        t20.setText(String((int)round(weatherData[day].minTemp * 1.8 + 32)));
+
+      if(tempScale == 0)
+        t22.setText(String(weatherData[day].maxTemp));
+      else
+        t22.setText(String((int)round(weatherData[day].maxTemp * 1.8 + 32)));
+    }
+
+    day++;
   }
 }
 
@@ -351,7 +432,7 @@ void u0PopCallback(void *ptr)
 /* TBD */
 void dataHandler(const char *event, const char *data)
 {
-  dbSerialPrintln("dataHandler");
+  dbSerialPrintln("in dataHandler");
 
   if (data) {
     if ((String)event == "Outside_Temperature")
@@ -378,15 +459,155 @@ void dataHandler(const char *event, const char *data)
     dbSerialPrintln("NULL");
 }
 
+/* Getting weather from forecast.io API */
+void getWeather() {
+  dbSerialPrintln("in getWeather");
+
+  weather_state = WEATHER_REQUESTING;
+  // Publish the event that will trigger our webhook
+  Particle.publish(HOOK_PUB, "forecast.io", 60, PRIVATE);
+
+  unsigned long wait = millis();
+  // Wait for subscribe to kick in or 5 secs
+  while (weather_state == WEATHER_REQUESTING  && (millis() < wait + 5000UL))
+    // Tells the Photon to check for incoming messages from particle cloud
+    Particle.process();
+  if (weather_state == WEATHER_REQUESTING) {
+    dbSerialPrintln("Weather update failed");
+    badWeatherCall++;
+    if (badWeatherCall > 4) {
+      // If 5 webhook call fail in a row, Print fail
+      dbSerialPrintln("Webhook Weathercall failed!");
+      System.reset();
+    }
+  }
+  else
+    badWeatherCall = 0;
+}
+
+/* Returns enumatrion  for icon */
+int processIcon(String Icon, int day) {
+  dbSerialPrintln("in processIcon - " + Icon + " - " + String(day));
+
+  if(Icon == "clear-day" && day == 0)
+    return CLEAR_DAY_LIGHT;
+  else if(Icon == "clear-day" && day > 0)
+    return CLEAR_DAY_DARK;
+  else if(Icon == "clear-night" && day == 0)
+    return CLEAR_NIGHT_LIGHT;
+  else if(Icon == "clear-night" && day > 0)
+    return CLEAR_NIGHT_DARK;
+  else if(Icon == "rain" && day == 0)
+    return RAIN_LIGHT;
+  else if(Icon == "rain" && day > 0)
+    return RAIN_DARK;
+  else if(Icon == "snow" && day == 0)
+    return SNOW_LIGHT;
+  else if(Icon == "snow" && day > 0)
+    return SNOW_DARK;
+  else if(Icon == "sleet" && day == 0)
+    return SLEET_LIGHT;
+  else if(Icon == "sleet" && day > 0)
+    return SLEET_DARK;
+  else if(Icon == "wind" && day == 0)
+    return WIND_LIGHT;
+  else if(Icon == "wind" && day > 0)
+    return WIND_DARK;
+  else if(Icon == "fog" && day == 0)
+    return FOG_LIGHT;
+  else if(Icon == "fog" && day > 0)
+    return FOG_DARK;
+  else if(Icon == "cloudy" && day == 0)
+    return CLOUDY_LIGHT;
+  else if(Icon == "cloudy" && day > 0)
+    return CLOUDY_DARK;
+  else if(Icon == "partly-cloudy-day" && day == 0)
+    return PARTLY_CLOUDY_DAY_LIGHT;
+  else if(Icon == "partly-cloudy-day" && day > 0)
+    return PARTLY_CLOUDY_DAY_DARK;
+  else if(Icon == "partly-cloudy-night" && day == 0)
+    return PARTLY_CLOUDY_NIGHT_LIGHT;
+  else if(Icon == "partly-cloudy-night" && day > 0)
+    return PARTLY_CLOUDY_DAY_DARK;
+  else
+    return 0;
+}
+
+/* Processing weather data which got from forecast.io */
+void processWeatherData(const char *name, const char *data) {
+  dbSerialPrintln("in processWeather");
+  String str = String(data);
+  char strBuffer[300] = "";
+  str.toCharArray(strBuffer, 300);
+  int day = 0;
+  String tmpStr;
+
+  dbSerialPrintln("Time now: " + String(Time.hour()) + ":" + String(Time.minute()));
+  //dbSerialPrintln("Data: " + str);
+
+  // Parse the API response.
+  while(day < 4) {
+    if(day == 0)
+      weatherData[day].summ = strtok(strBuffer, "~");
+    else {
+      weatherData[day].summ = strtok(NULL, "~");
+      //dbSerialPrintln("Summary: " + );
+    }
+
+    weatherData[day].weekday = Time.weekday(Time.now() + day*86400);
+    weatherData[day].icon = processIcon(strtok(NULL, "~"), day);
+
+    if(day > 0) {
+      weatherData[day].minTemp = (((int)round(atof(strtok(NULL, "~"))))-32)/1.8;
+      weatherData[day].maxTemp = (((int)round(atof(strtok(NULL, "~"))))-32)/1.8;
+    }
+
+    day++;
+  }
+
+  int cnt = 0;
+  while(cnt < 4) {
+    dbSerialPrint("Day " + String(cnt) + ": ");
+    dbSerialPrint("Summary: " + weatherData[cnt].summ + ", ");
+    dbSerialPrint("Icon: " + String(weatherData[cnt].icon) + ", ");
+    dbSerialPrint("Weekday: " + String(weatherData[cnt].weekday) + ", ");
+    dbSerialPrint("Min Temp: " + String(weatherData[cnt].minTemp) + ", ");
+    dbSerialPrintln("Max Temp: " + String(weatherData[cnt].maxTemp));
+    cnt++;
+  }
+
+  weather_state = WEATHER_READY;
+  updateweatherhour = Time.hour();
+
+  renderScreen(HOME_SCREEN);
+}
+
+
 /* ******************************** */
 /* ************* SETUP ************ */
 /* ******************************** */
 
 void setup() {
   Serial.begin(9600);
+  //while(!Serial.available()) Particle.process();
 
+  //nextion.setBrightness(DISPLAY_BRIGHTNESS);
+
+  /* BUTTON - WILL BE REMOVED LATER */
+  pinMode(D4, INPUT_PULLUP);
+  // Setup button timers (all in milliseconds / ms)
+  // (These are default if not set, but changeable for convenience)
+  button1.debounceTime   = 20;   // Debounce timer in ms
+  button1.multiclickTime = 250;  // Time limit for multi clicks
+  button1.longClickTime  = 1000; // time until "held-down clicks" register
+
+
+  // Subscribing for sensor data
   Particle.subscribe("Outside_Temperature", dataHandler, MY_DEVICES);
   Particle.subscribe("Outside_Humidity", dataHandler, MY_DEVICES);
+
+  // Subscribing for weather data API call
+  Particle.subscribe(HOOK_RESP, processWeatherData, MY_DEVICES);
 
   /* Set the baudrate which is for debug and communicate with Nextion screen. */
   nexInit();
@@ -444,9 +665,36 @@ void setup() {
 void loop() {
   nexLoop(nex_listen_list);
 
+  /* BUTTON - WILL BE REMOVED LATER */
+  // Update button state
+  button1.Update();
+  // Save click codes in LEDfunction, as click codes are reset at next Update()
+  if (button1.clicks != 0)
+    function = button1.clicks;
+
+  if(button1.clicks == 1) {
+    Serial.println("SINGLE click");
+    getWeather();
+  }
+  /*if(function == 2) Serial.println("DOUBLE click");
+  if(function == 3) Serial.println("TRIPLE click");
+  if(function == -1) Serial.println("SINGLE LONG click");
+  if(function == -2) Serial.println("DOUBLE LONG click");
+  if(function == -3) Serial.println("TRIPLE LONG click");*/
+
+
   // Change forecast days of week after midnight
   if(currentWeekday < Time.weekday()) {
     currentWeekday = Time.weekday();
     renderScreen(HOME_SCREEN);
   }
+
+  /* Fetching weather data one time in an hour */
+  if (Time.hour() != updateweatherhour){
+    getWeather();
+  }
+
+  /* BUTTON - WILL BE REMOVED LATER */
+  function = 0;
+  delay(5);
 }
